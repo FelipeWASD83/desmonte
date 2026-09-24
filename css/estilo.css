@@ -1,0 +1,1118 @@
+/* Desmonte: a bancada de reparo. Tudo que dá pra trocar na mão está nestas
+   variáveis — cor, fonte, espaço, raio e tempo. Mexe aqui em cima e o resto
+   acompanha; não precisa entender o resto do arquivo. */
+:root {
+  /* O tampo de grafite (fundo da página) e a manta de silicone. */
+  --tampo: #1e2225;
+  --manta: #4a5d68;
+
+  /* Texto em cima do tampo escuro, em três níveis. */
+  --luz: #eef3f5;
+  --luz-2: rgba(238, 243, 245, 0.78);
+  --luz-3: rgba(238, 243, 245, 0.62);
+
+  /* As fichas de papel (painel, lista, ficha da peça) e a tinta delas. */
+  --papel: #eef0ec;
+  --papel-forte: #ffffff;
+  --tinta: #15191b;
+  --tinta-2: rgba(21, 25, 27, 0.78);
+  --tinta-3: rgba(21, 25, 27, 0.64);
+  --linha: rgba(21, 25, 27, 0.14);
+  --linha-forte: rgba(21, 25, 27, 0.32);
+
+  /* A única cor de ação: o laranja de cabo de ferramenta. Em texto sobre papel
+     ela escurece pra dar leitura. */
+  --acao: #ff5b24;
+  --acao-texto: #b8400f;
+  --no-acao: #1a0802;
+
+  /* Fontes: Archivo largo e leve no título, Archivo no texto, mono nas cotas. */
+  --fonte-titulo: 'Archivo', system-ui, sans-serif;
+  --fonte-corpo: 'Archivo', system-ui, sans-serif;
+  --fonte-mono: 'JetBrains Mono', ui-monospace, 'Consolas', monospace;
+
+  /* Escala de texto (cota 11 · corpo 14 · destaque 17 · ficha 26 · título 56). */
+  --t-cota: 11px;
+  --t-corpo: 14px;
+  --t-destaque: 17px;
+  --t-ficha: 26px;
+  --t-titulo: clamp(40px, 3.9vw, 60px);
+
+  /* Espaço, raio, sombra e tempo. */
+  --e1: 4px;
+  --e2: 8px;
+  --e3: 12px;
+  --e4: 16px;
+  --e5: 24px;
+  --e6: 32px;
+  --e7: 48px;
+  --raio: 6px;
+  --raio-pilula: 999px;
+  --sombra: 0 1px 0 rgba(0, 0, 0, 0.35), 0 10px 30px rgba(0, 0, 0, 0.32);
+  --rapido: 150ms;
+  --normal: 300ms;
+
+  --largura-painel: 372px;
+  --largura-pecas: 248px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--tampo);
+  color: var(--luz);
+  font-family: var(--fonte-corpo);
+  font-size: var(--t-corpo);
+  line-height: 1.5;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--acao);
+  outline-offset: 3px;
+}
+
+/* ---------- palco ---------- */
+.palco {
+  position: fixed;
+  inset: 0;
+}
+
+#cena,
+.diagrama-grande {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.diagrama-grande {
+  --tinta: #eef3f5;
+  --tinta-3: rgba(238, 243, 245, 0.62);
+  --linha-forte: rgba(238, 243, 245, 0.3);
+  /* Canvas não estica por `inset`: largura e altura vão explícitas. */
+  inset: auto;
+  left: calc(var(--largura-pecas) + 64px);
+  top: 250px;
+  width: calc(100% - var(--largura-pecas) - var(--largura-painel) - 128px);
+  height: calc(100% - 330px);
+}
+
+.etiquetas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* A etiqueta de compartimento: pontinho laranja e o número em papel. */
+.etiqueta {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--fonte-mono);
+  font-size: var(--t-cota);
+  white-space: nowrap;
+  visibility: hidden;
+  transition: opacity var(--rapido);
+  will-change: transform;
+}
+
+.etiqueta::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--acao);
+  box-shadow: 0 0 0 2px rgba(30, 34, 37, 0.7);
+}
+
+.etiqueta b {
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--papel);
+  color: var(--tinta);
+  font-weight: 500;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.etiqueta span {
+  display: none;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--papel);
+  color: var(--tinta);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.etiqueta.acesa span {
+  display: inline;
+}
+
+.etiqueta.acesa b {
+  background: var(--acao);
+  color: var(--no-acao);
+}
+
+/* As cotas oficiais, desenhadas sobre o objeto (a ideia é do Igloo). */
+.cota {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(30, 34, 37, 0.82);
+  color: var(--acao);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-cota);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  visibility: hidden;
+}
+
+/* ---------- HUD de cima à esquerda ---------- */
+.topo {
+  position: absolute;
+  top: var(--e6);
+  left: var(--e6);
+  max-width: 460px;
+  pointer-events: none;
+}
+
+.marca,
+.sub,
+.dica,
+.pecas-grupo,
+.leituras dt,
+.previa figcaption,
+.diagrama figcaption,
+.disparos,
+.rolo-titulo,
+.ficha-fato,
+.ficha-fonte {
+  font-family: var(--fonte-mono);
+  font-size: var(--t-cota);
+  letter-spacing: 0.08em;
+}
+
+.marca {
+  margin: 0 0 var(--e3);
+  text-transform: uppercase;
+  color: var(--luz-3);
+}
+
+/* Do Produx: título grande em peso leve, largo, sem gritar. */
+.titulo {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-weight: 300;
+  font-stretch: 118%;
+  font-size: var(--t-titulo);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--luz);
+}
+
+.sub {
+  margin: var(--e3) 0 0;
+  max-width: 400px;
+  color: var(--luz-2);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+.dica {
+  position: absolute;
+  left: calc(var(--largura-pecas) + var(--e6) + var(--e5));
+  right: calc(var(--largura-painel) + var(--e6) + var(--e5));
+  bottom: var(--e5);
+  margin: 0;
+  color: var(--luz-2);
+  pointer-events: none;
+}
+
+/* A manta passa por trás do texto: uma sombra macia segura a leitura. */
+.topo,
+.dica {
+  text-shadow: 0 1px 2px rgba(20, 23, 25, 0.95), 0 0 14px rgba(20, 23, 25, 0.9);
+}
+
+.carregando {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-family: var(--fonte-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--luz-2);
+  animation: piscar 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes piscar {
+  to {
+    opacity: 0.45;
+  }
+}
+
+.aviso {
+  position: absolute;
+  left: 50%;
+  top: 150px;
+  transform: translateX(-50%);
+  max-width: 460px;
+  margin: 0;
+  padding: var(--e4) var(--e5);
+  border-radius: var(--raio);
+  background: var(--papel);
+  color: var(--tinta);
+  box-shadow: var(--sombra);
+  z-index: 3;
+}
+
+/* ---------- modos e cores ---------- */
+.modos {
+  position: fixed;
+  top: var(--e6);
+  right: calc(var(--largura-painel) + var(--e5) + var(--e5));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--e3);
+  z-index: 2;
+}
+
+.pilulas {
+  display: flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--raio-pilula);
+  background: var(--papel);
+  box-shadow: var(--sombra);
+}
+
+.pilulas button {
+  border: 0;
+  background: transparent;
+  padding: var(--e2) var(--e4);
+  border-radius: var(--raio-pilula);
+  color: var(--tinta-2);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background var(--rapido), color var(--rapido);
+  white-space: nowrap;
+}
+
+.pilulas button:hover {
+  color: var(--tinta);
+  background: rgba(21, 25, 27, 0.06);
+}
+
+.pilulas button[aria-pressed='true'] {
+  background: var(--acao);
+  color: var(--no-acao);
+  font-weight: 600;
+}
+
+.afastar,
+.acabamentos {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e2) var(--e4);
+  border-radius: var(--raio-pilula);
+  background: var(--papel);
+  color: var(--tinta-2);
+  box-shadow: var(--sombra);
+  font-size: 13px;
+}
+
+.afastar span {
+  white-space: nowrap;
+}
+
+.afastar input {
+  width: 140px;
+}
+
+.acabamentos {
+  gap: var(--e2);
+  padding: 6px var(--e4) 6px 8px;
+}
+
+.amostra {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cor);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25), inset 0 -4px 6px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.amostra[aria-pressed='true'] {
+  outline: 2px solid var(--acao);
+  outline-offset: 2px;
+}
+
+.acabamento-nome {
+  min-width: 64px;
+  margin-left: var(--e1);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-cota);
+  letter-spacing: 0.06em;
+  color: var(--tinta-2);
+}
+
+/* ---------- lista de peças ---------- */
+.pecas {
+  position: fixed;
+  left: var(--e6);
+  top: 212px;
+  bottom: 64px;
+  width: var(--largura-pecas);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(238, 243, 245, 0.2) transparent;
+  z-index: 2;
+}
+
+.pecas-grupo {
+  margin: 0 0 var(--e2);
+  font-weight: 400;
+  text-transform: uppercase;
+  color: var(--luz-3);
+}
+
+.pecas ul {
+  list-style: none;
+  margin: 0 0 var(--e4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  max-width: 100%;
+  padding: 3px var(--e3) 3px 3px;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(238, 240, 236, 0.92);
+  color: var(--tinta-2);
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  transition: background var(--rapido), color var(--rapido), transform var(--rapido);
+}
+
+.chip:hover {
+  color: var(--tinta);
+  background: var(--papel-forte);
+  transform: translateX(2px);
+}
+
+.chip-numero {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 20px;
+  border-radius: 3px;
+  background: rgba(21, 25, 27, 0.08);
+  font-family: var(--fonte-mono);
+  font-size: 10px;
+  color: var(--tinta-3);
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--acao);
+  color: var(--no-acao);
+  font-weight: 600;
+}
+
+.chip[aria-pressed='true'] .chip-numero {
+  background: rgba(26, 8, 2, 0.14);
+  color: var(--no-acao);
+}
+
+/* ---------- ficha da peça ---------- */
+.ficha {
+  position: fixed;
+  left: calc(var(--largura-pecas) + var(--e6) + var(--e5));
+  bottom: var(--e5);
+  width: min(480px, calc(100vw - var(--largura-pecas) - var(--largura-painel) - 140px));
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  padding: var(--e5) var(--e5) var(--e4);
+  border-radius: var(--raio);
+  background: var(--papel);
+  color: var(--tinta);
+  box-shadow: var(--sombra);
+  z-index: 3;
+  animation: subir var(--normal) ease-out;
+}
+
+@keyframes subir {
+  from {
+    transform: translateY(8px);
+  }
+}
+
+.fechar {
+  position: absolute;
+  top: var(--e2);
+  right: var(--e2);
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--tinta-3);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.fechar:hover {
+  color: var(--tinta);
+  background: rgba(21, 25, 27, 0.06);
+}
+
+.ficha-numero {
+  margin: 0;
+  font-family: var(--fonte-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--acao-texto);
+}
+
+.ficha-nome {
+  margin: 0 0 var(--e1);
+  font-family: var(--fonte-titulo);
+  font-weight: 400;
+  font-stretch: 112%;
+  font-size: var(--t-ficha);
+  line-height: 1.1;
+}
+
+.ficha-fato {
+  margin: 0 0 var(--e3);
+  color: var(--tinta-2);
+}
+
+.ficha-texto {
+  margin: 0 0 var(--e3);
+  color: var(--tinta-2);
+  font-size: 15px;
+}
+
+.ficha-fonte {
+  margin: 0;
+  padding-top: var(--e2);
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-3);
+}
+
+/* ---------- painel da câmera ---------- */
+.painel {
+  position: fixed;
+  top: var(--e5);
+  right: var(--e5);
+  bottom: var(--e5);
+  width: var(--largura-painel);
+  padding: var(--e5);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--linha-forte) transparent;
+  border-radius: var(--raio);
+  background: var(--papel);
+  color: var(--tinta);
+  box-shadow: var(--sombra);
+  z-index: 2;
+}
+
+.painel-titulo {
+  margin: 0 0 var(--e4);
+  font-family: var(--fonte-titulo);
+  font-weight: 300;
+  font-stretch: 118%;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.controle {
+  margin-bottom: var(--e4);
+}
+
+.controle-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--e3);
+}
+
+.controle label,
+.controle .rotulo {
+  font-weight: 600;
+}
+
+.controle output {
+  font-family: var(--fonte-mono);
+  font-size: 12px;
+  color: var(--acao-texto);
+  text-align: right;
+}
+
+.controle.desligado label,
+.controle.desligado output {
+  opacity: 0.55;
+}
+
+.fala {
+  margin: 2px 0 0;
+  min-height: 1.5em;
+  font-size: 13px;
+  color: var(--tinta-2);
+}
+
+.zooms {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin-top: var(--e2);
+}
+
+.zooms button {
+  padding: 6px 0;
+  border: 1px solid var(--linha-forte);
+  border-radius: var(--raio-pilula);
+  background: transparent;
+  color: var(--tinta-2);
+  font-family: var(--fonte-mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--rapido), color var(--rapido), border-color var(--rapido);
+}
+
+.zooms button:hover {
+  border-color: var(--tinta);
+  color: var(--tinta);
+}
+
+.zooms button[aria-pressed='true'] {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--papel);
+}
+
+input[type='range'] {
+  width: 100%;
+  height: 22px;
+  margin: var(--e1) 0 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+input[type='range']:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--acao) var(--p, 50%), var(--linha-forte) var(--p, 50%));
+}
+
+input[type='range']::-moz-range-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--linha-forte);
+}
+
+input[type='range']::-moz-range-progress {
+  height: 3px;
+  background: var(--acao);
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6.5px;
+  border-radius: 50%;
+  background: var(--papel-forte);
+  border: 2px solid var(--acao);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--papel-forte);
+  border: 2px solid var(--acao);
+}
+
+.afastar input[type='range'] {
+  margin: 0;
+}
+
+.chave {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  margin: var(--e2) 0 0;
+  cursor: pointer;
+}
+
+.fala--chave {
+  margin: var(--e2) 0 var(--e4);
+}
+
+.chave input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chave-trilho {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--raio-pilula);
+  background: var(--linha-forte);
+  transition: background var(--rapido);
+}
+
+.chave-trilho::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--papel-forte);
+  transition: transform var(--rapido);
+}
+
+.chave input:checked + .chave-trilho {
+  background: var(--acao);
+}
+
+.chave input:checked + .chave-trilho::after {
+  transform: translateX(16px);
+}
+
+.chave input:focus-visible + .chave-trilho {
+  outline: 2px solid var(--acao);
+  outline-offset: 3px;
+}
+
+.previa,
+.diagrama {
+  margin: 0 0 var(--e3);
+}
+
+.previa canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 4px;
+  background: #0d0f11;
+  cursor: crosshair;
+}
+
+.diagrama canvas {
+  display: block;
+  width: 100%;
+  height: 170px;
+  border-radius: 4px;
+  background: var(--papel-forte);
+  border: 1px solid var(--linha);
+}
+
+.previa figcaption,
+.diagrama figcaption {
+  margin-top: var(--e2);
+  color: var(--tinta-3);
+}
+
+.disparar {
+  width: 100%;
+  padding: var(--e3);
+  border: 0;
+  border-radius: var(--raio-pilula);
+  background: var(--acao);
+  color: var(--no-acao);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: filter var(--rapido), transform var(--rapido);
+}
+
+.disparar:hover {
+  filter: brightness(1.08);
+}
+
+.disparar:active {
+  transform: scale(0.98);
+}
+
+.disparos {
+  margin: var(--e2) 0 var(--e3);
+  min-height: 1.5em;
+  text-align: center;
+  color: var(--tinta-3);
+}
+
+.rolo {
+  margin: 0 0 var(--e4);
+}
+
+.rolo-titulo {
+  margin: 0 0 var(--e2);
+  font-weight: 400;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+}
+
+.rolo-vazio {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tinta-2);
+}
+
+.fotos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.fotos button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--linha);
+  border-radius: 3px;
+  overflow: hidden;
+  background: #0d0f11;
+  cursor: zoom-in;
+  transition: border-color var(--rapido), transform var(--rapido);
+}
+
+.fotos button:hover {
+  border-color: var(--acao);
+  transform: translateY(-1px);
+}
+
+.fotos img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.leituras {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e3) var(--e4);
+  margin: 0 0 var(--e4);
+  padding-top: var(--e4);
+  border-top: 1px solid var(--linha);
+}
+
+.leituras dt {
+  text-transform: uppercase;
+  color: var(--tinta-3);
+}
+
+.leituras dd {
+  margin: 2px 0 0;
+  font-family: var(--fonte-mono);
+  font-size: 12.5px;
+  color: var(--tinta);
+}
+
+.foto-grande {
+  width: min(1100px, 92vw);
+  padding: 0;
+  border: 0;
+  border-radius: var(--raio);
+  background: var(--papel);
+  color: var(--tinta);
+  box-shadow: var(--sombra);
+}
+
+.foto-grande::backdrop {
+  background: rgba(12, 14, 16, 0.84);
+}
+
+.foto-grande img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+}
+
+.foto-grande-barra {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e3) var(--e4);
+}
+
+.foto-grande-barra p {
+  flex: 1;
+  margin: 0;
+  font-family: var(--fonte-mono);
+  font-size: 12px;
+  color: var(--tinta-2);
+}
+
+.foto-salvar,
+.foto-grande-barra button {
+  padding: var(--e2) var(--e4);
+  border-radius: var(--raio-pilula);
+  border: 1px solid var(--linha-forte);
+  background: transparent;
+  color: var(--tinta);
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.foto-salvar {
+  background: var(--acao);
+  border-color: var(--acao);
+  color: var(--no-acao);
+  font-weight: 600;
+}
+
+/* ---------- telas em pé, estreitas e celular: tudo desce em fila ---------- */
+@media (max-width: 1100px), (max-aspect-ratio: 1/1) {
+  /* Empilhado a página vira dois blocos: a bancada escura em cima e os
+     controles em cinza-claro embaixo (escuro seguido de escuro é proibido). */
+  body {
+    overflow: auto;
+    background: #e3e6e2;
+    color: var(--tinta);
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      'palco palco'
+      'modos modos'
+      'ficha ficha'
+      'painel pecas';
+    gap: var(--e4);
+    padding: 0 var(--e4) var(--e6);
+    align-items: start;
+  }
+
+  .palco {
+    grid-area: palco;
+    position: relative;
+    inset: auto;
+    height: 62vh;
+    min-height: 400px;
+    margin: 0 calc(-1 * var(--e4));
+    background: var(--tampo);
+  }
+
+  .diagrama-grande {
+    left: var(--e4);
+    top: 260px;
+    width: calc(100% - 2 * var(--e4));
+    height: calc(100% - 290px);
+  }
+
+  .modos,
+  .pecas,
+  .painel,
+  .ficha {
+    position: static;
+    width: auto;
+  }
+
+  .modos {
+    grid-area: modos;
+    align-items: stretch;
+  }
+
+  .pilulas {
+    justify-content: stretch;
+  }
+
+  .pilulas button {
+    flex: 1;
+  }
+
+  .afastar input {
+    flex: 1;
+  }
+
+  .ficha {
+    grid-area: ficha;
+    max-height: none;
+    background: var(--papel-forte);
+  }
+
+  .painel {
+    grid-area: painel;
+    overflow: visible;
+    background: var(--papel-forte);
+  }
+
+  .pecas {
+    grid-area: pecas;
+    overflow: visible;
+  }
+
+  .pecas-grupo {
+    color: var(--tinta-3);
+  }
+
+  .chip {
+    background: var(--papel-forte);
+    box-shadow: 0 0 0 1px var(--linha);
+  }
+
+  .topo {
+    top: var(--e5);
+    left: var(--e5);
+  }
+
+  .dica {
+    left: var(--e5);
+    right: var(--e5);
+    bottom: var(--e3);
+  }
+}
+
+@media (max-width: 720px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'palco'
+      'modos'
+      'ficha'
+      'painel'
+      'pecas';
+  }
+
+  .palco {
+    height: 58vh;
+  }
+
+  .topo {
+    max-width: calc(100% - 40px);
+  }
+
+  .sub {
+    display: none;
+  }
+
+  .pilulas button {
+    padding: var(--e2) var(--e1);
+    font-size: 13px;
+  }
+
+  .pecas ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+/* Dedo, não mouse: alvo de toque com 44 px e texto de corpo com 16 px. */
+@media (pointer: coarse), (max-width: 720px) {
+  :root {
+    --t-corpo: 16px;
+  }
+
+  .chip {
+    min-height: 44px;
+    padding: 8px var(--e4) 8px 8px;
+    font-size: 15px;
+  }
+
+  .pilulas button,
+  .zooms button {
+    min-height: 44px;
+  }
+
+  .amostra {
+    width: 32px;
+    height: 32px;
+  }
+
+  .chave,
+  .afastar {
+    min-height: 44px;
+  }
+
+  input[type='range'] {
+    height: 36px;
+  }
+
+  .fechar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .fala,
+  .ficha-texto {
+    font-size: 16px;
+  }
+
+  .disparar {
+    min-height: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

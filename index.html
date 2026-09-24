@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desmonte — o iPhone 18 Pro Max por dentro</title>
+<meta name="description" content="O iPhone 18 Pro Max aberto peça por peça, na ordem do teardown, e as três câmeras fotografando de verdade.">
+<meta name="theme-color" content="#1e2225">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='14' y='4' width='36' height='56' rx='9' fill='%234a5d68'/%3E%3Ccircle cx='38' cy='16' r='5' fill='none' stroke='%23ff5b24' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/estilo.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<main class="app">
+  <section class="palco" aria-label="O celular em 3D na bancada">
+    <canvas id="cena" aria-label="Modelo 3D do iPhone 18 Pro Max. Arraste para girar, role para aproximar, clique numa peça para ver o que ela faz."></canvas>
+    <canvas id="diagrama2d" class="diagrama-grande" hidden aria-label="Desenho da luz até o sensor"></canvas>
+    <div class="etiquetas" id="etiquetas" aria-hidden="true"></div>
+
+    <header class="topo">
+      <p class="marca" id="marca"></p>
+      <h1 class="titulo" id="titulo"></h1>
+      <p class="sub" id="sub"></p>
+    </header>
+
+    <p class="dica" id="dica"></p>
+    <p class="aviso" id="aviso" hidden></p>
+    <p class="carregando" id="carregando">montando o celular na bancada…</p>
+  </section>
+
+  <nav class="modos" aria-label="Como ver o celular">
+    <div class="pilulas" role="group" aria-label="Modo" id="modos"></div>
+    <label class="afastar" id="afastar" hidden>
+      <span>Afastar as peças</span>
+      <input type="range" id="explodir" min="0" max="100" value="100">
+    </label>
+    <div class="acabamentos" role="group" aria-label="Cor" id="acabamentos"></div>
+  </nav>
+
+  <article class="ficha" id="ficha" hidden aria-live="polite">
+    <button type="button" class="fechar" id="fecharFicha" aria-label="Fechar a ficha da peça">×</button>
+    <p class="ficha-numero" id="fichaNumero"></p>
+    <h2 class="ficha-nome" id="fichaNome"></h2>
+    <p class="ficha-fato" id="fichaFato"></p>
+    <p class="ficha-texto" id="fichaTexto"></p>
+    <p class="ficha-fonte" id="fichaFonte"></p>
+  </article>
+
+  <section class="painel" aria-label="Controles da câmera">
+    <h2 class="painel-titulo">A câmera</h2>
+
+    <div class="controle">
+      <div class="controle-linha">
+        <span class="rotulo" id="rotuloLente">Lente</span>
+        <output id="lenteValor"></output>
+      </div>
+      <div class="zooms" role="group" aria-labelledby="rotuloLente" id="zooms"></div>
+    </div>
+
+    <div class="controle" id="controleAbertura">
+      <div class="controle-linha">
+        <label for="abertura">Abertura</label>
+        <output id="aberturaValor" for="abertura"></output>
+      </div>
+      <input type="range" id="abertura" min="0" max="3" value="0" step="1">
+      <p class="fala" id="aberturaFala"></p>
+    </div>
+
+    <div class="controle">
+      <div class="controle-linha">
+        <label for="foco">Foco</label>
+        <output id="focoValor" for="foco"></output>
+      </div>
+      <input type="range" id="foco" min="0" max="1000" value="700">
+      <p class="fala" id="focoFala"></p>
+    </div>
+
+    <label class="chave">
+      <input type="checkbox" id="tremor">
+      <span class="chave-trilho" aria-hidden="true"></span>
+      <span>Mão tremendo</span>
+    </label>
+    <label class="chave">
+      <input type="checkbox" id="ois" checked>
+      <span class="chave-trilho" aria-hidden="true"></span>
+      <span>Estabilização (sensor-shift)</span>
+    </label>
+    <p class="fala fala--chave" id="tremorFala"></p>
+
+    <figure class="previa">
+      <canvas id="previa" aria-label="O que o sensor vê: a oficina no fim da tarde. Clique num ponto para focar nele."></canvas>
+      <figcaption>o que o sensor vê, ao vivo · clica em qualquer coisa pra focar</figcaption>
+    </figure>
+
+    <button type="button" class="disparar" id="disparar">Fotografar</button>
+    <p class="disparos" id="disparos" aria-live="polite"></p>
+    <section class="rolo" aria-label="Fotos tiradas">
+      <h3 class="rolo-titulo">rolo</h3>
+      <p class="rolo-vazio" id="fotosVazio">nenhuma foto ainda</p>
+      <ol class="fotos" id="fotos"></ol>
+    </section>
+
+    <dl class="leituras">
+      <div><dt>focal real</dt><dd id="lFocal"></dd></div>
+      <div><dt>equivalente</dt><dd id="lEquivalente"></dd></div>
+      <div><dt>sensor</dt><dd id="lSensor"></dd></div>
+      <div><dt>furo</dt><dd id="lFuro"></dd></div>
+      <div><dt>tempo · ISO</dt><dd id="lTempo"></dd></div>
+      <div><dt>nítido de</dt><dd id="lPdc"></dd></div>
+      <div><dt>campo</dt><dd id="lCampo"></dd></div>
+      <div><dt>luz vs. f/4</dt><dd id="lLuz"></dd></div>
+    </dl>
+
+    <figure class="diagrama">
+      <canvas id="diagrama" aria-label="Desenho da luz até o sensor, em escala"></canvas>
+      <figcaption id="diagramaLegenda"></figcaption>
+    </figure>
+  </section>
+
+  <aside class="pecas" aria-label="Peças do celular" id="listaPecas"></aside>
+</main>
+<dialog class="foto-grande" id="fotoGrande" aria-label="Foto ampliada">
+  <img id="fotoGrandeImagem" alt="A foto que o celular tirou da oficina">
+  <div class="foto-grande-barra">
+    <p id="fotoGrandeLegenda"></p>
+    <a class="foto-salvar" id="fotoSalvar">Salvar</a>
+    <button type="button" id="fotoFechar">Fechar</button>
+  </div>
+</dialog>
+<script type="module" src="js/principal.js"></script>
+</body>
+</html>
