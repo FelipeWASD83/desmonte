@@ -196,8 +196,8 @@ function placaLogica() {
     s.moveTo(-36, 10);
     s.lineTo(36, 10);
     s.lineTo(36, 36);
-    s.lineTo(-10, 36);
-    s.lineTo(-10, 70);
+    s.lineTo(-17, 36);
+    s.lineTo(-17, 70);
     s.lineTo(-36, 70);
     s.lineTo(-36, 10);
     return s;
@@ -209,8 +209,8 @@ function placaLogica() {
   const dentro = new THREE.Path();
   dentro.moveTo(-34, 12);
   dentro.lineTo(-34, 68);
-  dentro.lineTo(-12, 68);
-  dentro.lineTo(-12, 34);
+  dentro.lineTo(-19, 68);
+  dentro.lineTo(-19, 34);
   dentro.lineTo(34, 34);
   dentro.lineTo(34, 12);
   dentro.lineTo(-34, 12);
@@ -220,14 +220,14 @@ function placaLogica() {
   const chip = M.chip();
   const lata = M.blindagem();
   g.add(caixa(11, 8.5, 0.7, chip, -23, 42.5, 1.85, 0.15)); // LPDDR5X, do lado do processador
-  g.add(caixa(22, 19, 0.9, lata, -23, 22, 1.95, 0.2));
+  g.add(caixa(17, 19, 0.9, lata, -26.5, 22, 1.95, 0.2));
   g.add(caixa(40, 20, 0.9, lata, 14, 23, 1.95, 0.2)); // modem e rádio
   g.add(caixa(6, 6, 0.6, chip, -4, 17, 1.8, 0.1));
   // Dentro do sanduíche: o armazenamento (NAND) e um chip de energia.
   g.add(caixa(11, 13, 1.2, chip, -23, 50, 0.15, 0.1));
   g.add(caixa(6, 6, 1.0, chip, 16, 22, 0.15, 0.1));
   // Face de baixo: mais blindagem.
-  g.add(caixa(24, 16, 0.6, lata, -23, 60, -1.5, 0.15));
+  g.add(caixa(17, 16, 0.6, lata, -26.5, 60, -1.5, 0.15));
   g.add(caixa(30, 16, 0.6, lata, 18, 22, -1.5, 0.15));
   // Conectores dourados onde os flex encaixam.
   const ouro = M.ouro();

@@ -13,13 +13,18 @@ import { M } from './materiais.js';
 import { caixa, cilindro, anel, disco, discoDeCostas, contorno, chapa, furo } from './formas.js';
 import * as O from './optica.js';
 
-// Centro de cada lente na ilha (estimado pelo 17 Pro Max: principal em cima,
-// ultra embaixo, tele no meio mais pra dentro).
+// Centro de cada lente na ilha e o tamanho dos anéis, medidos na proporção
+// das fotos de costas da página da Apple (a largura do celular, 78 mm, é a
+// régua): principal em cima, ultra embaixo, tele quase no meio do celular.
 export const LENTES = {
-  principal: { x: 22.5, y: 66.5, raioAnel: 8.3, raioVidro: 6.4 },
-  ultra: { x: 22.5, y: 47, raioAnel: 8.3, raioVidro: 6.4 },
-  tele: { x: 8.5, y: 57, raioAnel: 8.3, raioVidro: 6.4 },
+  principal: { x: 23, y: 69, raioAnel: 9.2, raioVidro: 7 },
+  ultra: { x: 23, y: 49.3, raioAnel: 9.2, raioVidro: 7 },
+  tele: { x: 2.5, y: 59, raioAnel: 9.2, raioVidro: 7 },
 };
+// Flash, LiDAR e microfone, medidos do mesmo jeito.
+export const FLASH = { x: -22.5, y: 70.5 };
+export const LIDAR = { x: -21, y: 50.5 };
+export const MICROFONE = { x: -20.5, y: 60.5 };
 
 const Z_SENSOR = 1.3; // a face do sensor (olhando pra −z)
 
@@ -301,16 +306,19 @@ function tele() {
 
 function flashLidar() {
   const g = new THREE.Group();
-  g.add(caixa(10, 34, 2.4, M.plasticoPreto(), -25, 59, -2.2, 0.4));
+  const cy = (FLASH.y + LIDAR.y) / 2;
+  const cx = (FLASH.x + LIDAR.x) / 2;
+  // Fino, embaixo da ilha e abaixo da placa.
+  g.add(caixa(10, FLASH.y - LIDAR.y + 10, 1.4, M.plasticoPreto(), cx, cy, -2.7, 0.4));
   // LiDAR: emissor e receptor lado a lado.
-  g.add(caixa(3, 3, 0.8, M.chip(), -26.5, 48, -3.7, 0.2));
-  g.add(caixa(3, 3, 0.8, M.chip(), -23.5, 48, -3.7, 0.2));
-  g.add(discoDeCostas(1, -4.12, M.lente(), -26.5, 48));
-  g.add(discoDeCostas(1, -4.12, M.lente(), -23.5, 48));
-  // O LED do flash, amarelado.
-  const led = caixa(4, 4, 0.8, M.flash(), -25, 70, -3.7, 0.3);
-  g.add(led);
-  g.add(caixa(4, 14, 0.15, M.flex(), -25, 36, -1.0, 0.05));
+  g.add(caixa(3, 3, 0.8, M.chip(), LIDAR.x - 1.5, LIDAR.y, -3.7, 0.2));
+  g.add(caixa(3, 3, 0.8, M.chip(), LIDAR.x + 1.5, LIDAR.y, -3.7, 0.2));
+  g.add(discoDeCostas(1, -4.12, M.lente(), LIDAR.x - 1.5, LIDAR.y));
+  g.add(discoDeCostas(1, -4.12, M.lente(), LIDAR.x + 1.5, LIDAR.y));
+  // O LED do flash.
+  g.add(caixa(4, 4, 0.8, M.chip(), FLASH.x, FLASH.y, -3.7, 0.3));
+  g.add(caixa(2.6, 2.6, 0.2, new THREE.MeshStandardMaterial({ color: 0xf4e9c8, roughness: 0.4 }), FLASH.x, FLASH.y, -4.12, 0.1));
+  g.add(caixa(4, 14, 0.15, M.flex(), cx, LIDAR.y - 12, -2.0, 0.05));
   return g;
 }
 

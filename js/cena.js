@@ -341,7 +341,7 @@ export class Cena {
 
     this.orbita.atualizar(dt, { respirar: !reduzirMovimento && e.modo === 'montado' });
     this.cenario.atualizar(this.tempo, reduzirMovimento);
-    this.sensor.piscar = Math.max(0, this.sensor.piscar - dt * 6);
+    this.sensor.piscar = Math.min(1, Math.max(0, this.sensor.piscar - dt * 6));
     this.quadroN++;
     // Primeiro a foto (a tela do celular usa ela), depois a vista principal.
     this.sensor.renderizar(this.quadroN % 2 === 0 || this.sensor.piscar > 0);

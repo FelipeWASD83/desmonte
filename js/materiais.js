@@ -175,10 +175,38 @@ const OLHO = textura(512, 512, (ctx, w, h) => {
   ctx.beginPath();
   ctx.arc(c, c, 0.28 * c, 0, Math.PI * 2);
   ctx.fill();
+  // Os reflexos azul e roxo do tratamento antirreflexo dos elementos.
+  const brilho = (x, y, r, cor) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, cor);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  };
+  brilho(c * 0.86, c * 0.8, c * 0.34, 'rgba(90,110,230,0.55)');
+  brilho(c * 1.12, c * 1.14, c * 0.22, 'rgba(150,90,210,0.35)');
+  brilho(c * 0.9, c * 0.84, c * 0.07, 'rgba(210,225,255,0.85)');
+});
+
+// A lente Fresnel do flash: anéis finos num branco leitoso.
+const FRESNEL = textura(256, 256, (ctx, w, h) => {
+  const c = w / 2;
+  ctx.fillStyle = '#e9e8e2';
+  ctx.fillRect(0, 0, w, h);
+  for (let r = 6; r < c; r += 7) {
+    ctx.strokeStyle = `rgba(120,118,110,${0.18 + (r / c) * 0.25})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(c, c, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // O LED amarelado no meio.
+  ctx.fillStyle = '#f2dd9c';
+  ctx.fillRect(c - 22, c - 22, 44, 44);
 });
 
 // Todos os materiais de alumínio e de vidro traseiro, pra trocar a cor de uma vez.
-export const PINTADOS = { aluminio: [], vidro: [], anel: [] };
+export const PINTADOS = { aluminio: [], vidro: [], anel: [], antena: [] };
 
 export const M = {
   aluminio: () => {
@@ -214,8 +242,8 @@ export const M = {
       roughnessMap: GRAO,
       clearcoat: 0.55,
       clearcoatRoughness: 0.38,
-      sheen: 0.4,
-      sheenRoughness: 0.5,
+      sheen: 0.12,
+      sheenRoughness: 0.6,
       sheenColor: new THREE.Color(0xffffff),
       specularIntensity: 1,
     });
@@ -236,6 +264,14 @@ export const M = {
       iridescenceThicknessRange: [230, 420],
       envMapIntensity: 2.4,
     }),
+  flash: () => new THREE.MeshPhysicalMaterial({ map: FRESNEL, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.05 }),
+  aroFlash: () => new THREE.MeshPhysicalMaterial({ color: 0xe6e8ea, metalness: 1, roughness: 0.12, clearcoat: 1 }),
+  // As linhas de antena: plástico fosco puxado pro tom do alumínio (a cor sai do pintar()).
+  antena: () => {
+    const m = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 });
+    PINTADOS.antena.push(m);
+    return m;
+  },
   olhoDeLente: () => new THREE.MeshPhysicalMaterial({ map: OLHO, roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02, iridescence: 0.9, iridescenceIOR: 1.4, iridescenceThicknessRange: [240, 460], envMapIntensity: 1.6 }),
   reflexo: () =>
     new THREE.MeshPhysicalMaterial({
@@ -301,7 +337,6 @@ export const M = {
       opacity: 0.55,
       depthWrite: false,
     }),
-  flash: () => new THREE.MeshStandardMaterial({ color: 0xf2e6c4, roughness: 0.3, emissive: 0x000000 }),
   safira: () => new THREE.MeshPhysicalMaterial({ color: 0x17181b, roughness: 0.08, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.03 }),
   // A tela mostra a saída do sensor como ela é: os bytes já estão em sRGB,
   // então vão direto pro canvas, sem conversão nem névoa.
@@ -318,4 +353,7 @@ export function pintar(acabamento) {
   for (const m of PINTADOS.aluminio) m.color.setHex(acabamento.aluminio);
   for (const m of PINTADOS.anel) m.color.setHex(acabamento.aluminio);
   for (const m of PINTADOS.vidro) m.color.setHex(acabamento.vidro);
+  // A antena é o alumínio puxado pro cinza: clara no preto, mais escura no prata.
+  const antena = new THREE.Color(acabamento.aluminio).lerp(new THREE.Color(0x8c8c8c), 0.45);
+  for (const m of PINTADOS.antena) m.color.copy(antena);
 }

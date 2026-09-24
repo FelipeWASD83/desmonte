@@ -222,9 +222,9 @@ export const MODOS = [
 // (neste ano a Apple juntou as duas cores).
 export const ACABAMENTOS = [
   { id: 'preto', nome: 'Preto', aluminio: 0x34353a, vidro: 0x232427 },
-  { id: 'prata', nome: 'Prata', aluminio: 0xd8d9dc, vidro: 0x8f9195 },
+  { id: 'prata', nome: 'Prata', aluminio: 0xe1e2e4, vidro: 0x9a9c9f },
   { id: 'glacier', nome: 'Glacier', aluminio: 0xb9ccd9, vidro: 0x7f93a2 },
-  { id: 'burgundy', nome: 'Burgundy', aluminio: 0x5c2230, vidro: 0x3e141e },
+  { id: 'burgundy', nome: 'Burgundy', aluminio: 0x8a3a4d, vidro: 0x55202d },
 ];
 
 const num = (v, casas = 1) => v.toFixed(casas).replace('.', ',');

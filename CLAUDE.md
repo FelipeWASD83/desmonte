@@ -77,10 +77,16 @@ publicado. As fontes (levantadas em 24/09/2026):
   A20 por fora da pilha, NAND dentro dela, a "cota de malha" térmica.
 - **GSMArena (não oficial)**: tamanho dos sensores (1/1,28" e 1/2,55").
 
+- **Fotos da página da Apple** (que ele mandou em 24/09/2026): posição das
+  três lentes, do flash, do LiDAR e do microfone, o tamanho dos anéis (≈18,5 mm)
+  e o recorte do vidro traseiro, medidos na proporção das vistas de costas com
+  a largura do celular (78 mm) como régua; as linhas de antena na lateral; o
+  aro prateado do flash; as cores.
+
 **Estimativa, dita na ficha de cada peça:** formato da placa e da bateria
-(copiado do 17 Pro Max), posição das lentes, do flash e do LiDAR, tamanho da
-ilha e dos módulos, foco mínimo da principal e da tele, a forma do prisma, as
-cores exatas (os nomes são oficiais, os tons não).
+(copiado do 17 Pro Max), medidas tiradas de foto (valem ± 1 mm), tamanho dos
+módulos, foco mínimo da principal e da tele, a forma do prisma, os tons exatos
+das cores (os nomes são oficiais).
 
 ## Decisões fechadas — não desfazer sem motivo novo
 
@@ -122,9 +128,12 @@ cores exatas (os nomes são oficiais, os tons não).
 - **Todo contorno é canto contínuo** (superelipse, expoente 4, alcance 17 mm):
   carcaça, vidro da tela, moldura e painel saem do mesmo `contornoDoCorpo()`
   deslocado, e por isso encaixam sem fresta. Mudou o canto, muda tudo junto.
-- **A ilha também é varrida**, 1,6 mm acima das costas, 1,6 mm pra dentro da
-  borda; os anéis das lentes são torneados (`LatheGeometry`) com a lente e os
-  anéis dos elementos por baixo da safira.
+- **A ilha também é varrida**, 1,8 mm acima das costas, 1,6 mm pra dentro da
+  borda, com a curvinha da base entrando um tico no corpo (encostar no plano
+  exato das costas dava briga de pixel). Os anéis das lentes são torneados
+  (`LatheGeometry`) com a lente e os elementos por baixo da safira.
+- **A tele fica quase no meio do celular** (x ≈ 2,5 mm), como nas fotos da
+  Apple; por isso a placa lógica recua até x = −17.
 - **Alumínio jateado:** `metalness` 0,6 com grão fino (`GRAO`, mapa de
   aspereza e de relevo, UV em milímetro). Com metal demais o prata saía
   cinza-chumbo; sem o grão parecia plástico.
@@ -136,6 +145,11 @@ cores exatas (os nomes são oficiais, os tons não).
   cima: é o que dá assunto pra tele (a cidade de 280 m a 1,2 km e a torre com a
   luz vermelha a 220 m). A bandejinha alta de parafusos existe pro macro da
   ultra (6 a 13 cm).
+- **O intervalo entre quadros nunca é negativo** (`principal.js`): o carimbo
+  do `requestAnimationFrame` pode vir antes do `performance.now()` do começo, e
+  o primeiro `dt` saía negativo — o "piscar" do visor crescia em vez de apagar
+  e a prévia ficava preta. **A `abertura` tem o mesmo laço** e não foi
+  corrigida lá (fora do escopo).
 - `?sem3d` no endereço força o plano B.
 
 ## Voz

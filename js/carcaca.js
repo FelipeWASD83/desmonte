@@ -11,7 +11,7 @@
 // da Apple; os raios do perfil são estimados pelas fotos do 17 Pro.
 import * as THREE from 'three';
 import { M } from './materiais.js';
-import { LENTES } from './cameras.js';
+import { LENTES, FLASH, LIDAR, MICROFONE } from './cameras.js';
 
 export const LARGURA = 78.0;
 export const ALTURA = 163.4;
@@ -35,14 +35,19 @@ const FRISO_ABAIXO = 0.1; // o aro fica um tico abaixo do vidro
 const PAREDE = 0.9; // espessura do fundo por dentro
 
 // A ilha das câmeras.
-export const ALTURA_DA_ILHA = 1.6;
+export const ALTURA_DA_ILHA = 1.8;
 export const TOPO_DA_ILHA = ZT - ALTURA_DA_ILHA;
 const ILHA_BAIXO = 36; // onde a ilha começa, em y
 const ILHA_RECUO = 1.6; // quanto ela fica pra dentro da borda do corpo
 const ILHA_RAIO = 0.8; // a quina de cima dela
 
-// O recorte do vidro traseiro.
-export const VIDRO_TRASEIRO = { x0: -30.3, y0: -73.8, x1: 30.3, y1: 29.8, canto: 10 };
+// O recorte do vidro traseiro, medido nas fotos da Apple: quase até as
+// bordas (4,7 mm de margem), de logo abaixo da ilha até perto do pé.
+export const VIDRO_TRASEIRO = { x0: -34.3, y0: -76.2, x1: 34.3, y1: 31, canto: 9 };
+
+// As linhas de antena que cruzam a lateral, em cima e embaixo, dos dois lados.
+const ANTENAS = [64, -64];
+const LARGURA_ANTENA = 1.1;
 
 // ---------- contorno ----------
 
@@ -248,7 +253,9 @@ export function construirCarcaca() {
   const perfilIlha = [
     [-ILHA_RAIO - 1.2, topo],
     ...arco(-ILHA_RAIO, topo + ILHA_RAIO, ILHA_RAIO, -90, 0, 12),
-    ...arco(0.45, ZT - 0.45, 0.45, 180, 90, 8).map(([d, z]) => [d, Math.min(z, ZT - 0.02)]),
+    // A curvinha da base entra um tico no corpo: encostar exatamente no plano
+    // das costas fazia as duas superfícies brigarem pelo mesmo pixel.
+    ...arco(0.45, ZT - 0.37, 0.45, 180, 90, 8),
   ];
   g.add(varrer(ilha, [perfilIlha], alu));
   g.add(tampa(new THREE.Shape(deslocar(ilha, -ILHA_RAIO - 1.2)), topo, alu, { costas: true }));
@@ -258,11 +265,12 @@ export function construirCarcaca() {
   for (const l of Object.values(LENTES)) g.add(anelDeLente(l, anelMat));
 
   // Flash, LiDAR e o furo do microfone, cada um num aro rebaixado.
-  g.add(janela(-25, 70, 3.5, new THREE.MeshPhysicalMaterial({ color: 0xece5d2, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08 }), anelMat));
-  g.add(janela(-25, 48, 3.5, M.lente(), anelMat));
-  const mic = new THREE.Mesh(new THREE.CircleGeometry(0.5, 20), M.plasticoPreto());
+  // O flash tem aro prateado polido em qualquer cor de celular, e lente Fresnel.
+  g.add(janela(FLASH.x, FLASH.y, 3.3, M.flash(), M.aroFlash(), 0.55));
+  g.add(janela(LIDAR.x, LIDAR.y, 3.1, M.lente(), anelMat, 0.4));
+  const mic = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20), M.plasticoPreto());
   mic.rotation.y = Math.PI;
-  mic.position.set(-12, 59, topo - 0.01);
+  mic.position.set(MICROFONE.x, MICROFONE.y, topo - 0.01);
   g.add(mic);
 
   // Borda de baixo: a boca da USB-C e os
@@ -282,7 +290,37 @@ export function construirCarcaca() {
   }
   // Os rebaixos dos botões nas laterais: a fresta escura em volta de cada um.
   for (const r of REBAIXOS) g.add(rebaixo(r, preto));
+  // As linhas de antena: faixas de plástico no tom do alumínio, atravessando
+  // a lateral de friso a friso.
+  const antena = M.antena();
+  for (const y of ANTENAS) for (const lado of [-1, 1]) g.add(faixaDeAntena(lateral, lado, y, antena));
   return g;
+}
+
+// Uma faixa que segue o perfil da lateral (de x = ±HX pra dentro) por
+// LARGURA_ANTENA mm de altura, um fio pra fora da superfície.
+function faixaDeAntena(perfil, lado, y, material) {
+  const pos = [];
+  const idx = [];
+  const y0 = y - LARGURA_ANTENA / 2;
+  const y1 = y + LARGURA_ANTENA / 2;
+  // Só a parte que aparece: da costa arredondada até o friso da frente.
+  const pts = perfil.filter(([d]) => d > -1.6);
+  pts.forEach(([d, z], j) => {
+    const x = lado * (HX + d + 0.012);
+    pos.push(x, y0, z, x, y1, z);
+    if (j) {
+      const a = (j - 1) * 2;
+      // Sentido das faces: pra fora da lateral de cada lado.
+      if (lado > 0) idx.push(a, a + 3, a + 2, a, a + 1, a + 3);
+      else idx.push(a, a + 2, a + 3, a, a + 3, a + 1);
+    }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return new THREE.Mesh(g, material);
 }
 
 // Aro torneado de uma lente: sobe da ilha, tem o topo arredondado e desce em
@@ -291,15 +329,17 @@ function anelDeLente(l, material) {
   const g = new THREE.Group();
   const R = l.raioAnel;
   const r = l.raioVidro;
+  // Sobe da ilha com uma curvinha na base, parede reta, topo bem arredondado
+  // e o chanfro fino por dentro descendo até a safira.
   const perfil = [
-    [R + 0.25, 0],
-    [R, 0.25],
-    [R, 1.45],
-    ...arco(R - 0.45, 1.45, 0.45, 0, 90, 10).map(([a, b]) => [a, b]),
-    [r + 0.9, 1.9],
-    [r + 0.2, 1.35],
-    [r, 1.2],
-    [r, 0.6],
+    [R + 0.35, 0],
+    ...arco(R + 0.35, 0.35, 0.35, 270, 180, 6),
+    [R, 1.35],
+    ...arco(R - 0.7, 1.35, 0.7, 0, 90, 14),
+    [r + 0.75, 2.05],
+    [r + 0.25, 1.8],
+    [r, 1.55],
+    [r, 0.7],
   ].map(([rr, h]) => new THREE.Vector2(rr, h));
   const torno = new THREE.LatheGeometry(perfil, 96);
   torno.rotateX(-Math.PI / 2); // a altura do torno vira −z (pra fora das costas)
@@ -310,22 +350,22 @@ function anelDeLente(l, material) {
   // A lente: disco escuro com os anéis dos elementos, embaixo da safira.
   const lente = new THREE.Mesh(new THREE.CircleGeometry(r, 64), M.olhoDeLente());
   lente.rotation.y = Math.PI;
-  lente.position.set(l.x, l.y, TOPO_DA_ILHA - 0.55);
+  lente.position.set(l.x, l.y, TOPO_DA_ILHA - 0.75);
   g.add(lente);
   const safira = new THREE.Mesh(new THREE.CircleGeometry(r, 64), M.reflexo());
   safira.rotation.y = Math.PI;
-  safira.position.set(l.x, l.y, TOPO_DA_ILHA - 1.2);
+  safira.position.set(l.x, l.y, TOPO_DA_ILHA - 1.5);
   safira.renderOrder = 2;
   g.add(safira);
   return g;
 }
 
-function janela(x, y, r, vidro, aroMat) {
+function janela(x, y, r, vidro, aroMat, largura = 0.45) {
   const g = new THREE.Group();
   const perfil = [
-    [r + 0.6, 0],
-    [r + 0.45, 0.22],
-    [r + 0.1, 0.25],
+    [r + largura + 0.15, 0],
+    [r + largura, 0.25],
+    [r + 0.1, 0.3],
     [r, 0.12],
   ].map(([a, b]) => new THREE.Vector2(a, b));
   const torno = new THREE.LatheGeometry(perfil, 64);

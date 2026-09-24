@@ -379,7 +379,9 @@ window.__desmonte = { estado, definir, cena, escolher };
 
 let ultimo = performance.now();
 function laco(agora) {
-  const dt = Math.min((agora - ultimo) / 1000, 0.05);
+  // O carimbo do requestAnimationFrame pode vir antes do performance.now() do
+  // começo: sem o limite de baixo, o primeiro intervalo saía negativo.
+  const dt = Math.min(Math.max((agora - ultimo) / 1000, 0), 0.05);
   ultimo = agora;
   if (cena) {
     const { pecas, cotas: posCotas } = cena.quadro(dt, { reduzirMovimento });
