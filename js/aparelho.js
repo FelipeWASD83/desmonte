@@ -9,8 +9,9 @@
 // desenho interno do 18). Onde é estimativa, a ficha da peça diz.
 import * as THREE from 'three';
 import { M } from './materiais.js';
-import { contorno, furo, chapa, caixa, cilindro, anel, disco, discoDeCostas } from './formas.js';
-import { construirCameras, LENTES } from './cameras.js';
+import { contorno, furo, chapa, caixa, cilindro, disco, discoDeCostas } from './formas.js';
+import { construirCameras } from './cameras.js';
+import { construirCarcaca, vidroTraseiro, botoesDoLado, cameraControl, formaDoCorpo, anelDoCorpo, TOPO_DA_ILHA } from './carcaca.js';
 import { PECAS } from './textos.js';
 
 export const LARGURA = 78.0;
@@ -20,8 +21,7 @@ const HX = LARGURA / 2;
 const HY = ALTURA / 2;
 const ZF = ESPESSURA / 2;
 const ZT = -ESPESSURA / 2;
-const CANTO = 12.5; // estimativa
-export const TOPO_DA_ILHA = ZT - 1.6; // a ilha das câmeras sai 1,6 mm das costas (estimativa)
+export { TOPO_DA_ILHA };
 
 // Tela ativa: 6,9" na diagonal com 2868 × 1320 pixels.
 const DIAG_TELA = 6.9 * 25.4;
@@ -100,8 +100,9 @@ export const NO_MODO_CAMERAS = new Set(['camera-principal', 'camera-ultra', 'cam
 // ---------- as peças ----------
 function tela(texturaVisor) {
   const g = new THREE.Group();
-  const vidro = chapa(contorno(-HX + 0.6, -HY + 0.6, HX - 0.6, HY - 0.6, CANTO - 0.6), 3.45, ZF, M.vidroPreto(), { chanfro: 0.35 });
-  const oled = chapa(contorno(-37, -79.8, 37, 79.8, 11), 3.0, 3.45, M.oled());
+  // Tudo no contorno do corpo: o vidro assenta dentro do friso de alumínio.
+  const vidro = chapa(formaDoCorpo(-1.35), 3.45, ZF, M.vidroPreto(), { chanfro: 0.3 });
+  const oled = chapa(formaDoCorpo(-2.1), 3.0, 3.45, M.oled());
   g.add(vidro, oled);
 
   // A interface do app de câmera, desenhada deitada (o celular está na horizontal).
@@ -130,7 +131,7 @@ function tela(texturaVisor) {
   g.add(ilha);
 
   // O reflexo do vidro por cima de tudo.
-  const reflexo = new THREE.Mesh(new THREE.ShapeGeometry(contorno(-HX + 0.7, -HY + 0.7, HX - 0.7, HY - 0.7, CANTO - 0.7), 24), M.reflexo());
+  const reflexo = new THREE.Mesh(new THREE.ShapeGeometry(formaDoCorpo(-1.45), 24), M.reflexo());
   reflexo.position.z = ZF + 0.06;
   reflexo.renderOrder = 2;
   g.add(reflexo);
@@ -140,9 +141,7 @@ function tela(texturaVisor) {
 const VISOR_CENTRO_Y = 20;
 
 function moldura() {
-  const f = contorno(-38.2, -80.9, 38.2, 80.9, 11.7);
-  f.holes.push(furo(-37.2, -79.9, 37.2, 79.9, 11));
-  return chapa(f, 2.95, 3.44, M.plasticoBranco());
+  return chapa(anelDoCorpo(-1.45, -2.35), 2.95, 3.44, M.plasticoBranco());
 }
 
 function faceId() {
@@ -293,53 +292,6 @@ function usbC() {
   return g;
 }
 
-function carcaca() {
-  const g = new THREE.Group();
-  const alu = M.aluminio();
-  const lateral = contorno(-HX, -HY, HX, HY, CANTO);
-  lateral.holes.push(furo(-HX + 1.1, -HY + 1.1, HX - 1.1, HY - 1.1, CANTO - 1.1));
-  g.add(chapa(lateral, ZT, 4.2, alu, { chanfro: 0.5 }));
-  // O fundo, com o recorte do vidro.
-  const fundo = contorno(-HX + 0.4, -HY + 0.4, HX - 0.4, HY - 0.4, CANTO - 0.4);
-  fundo.holes.push(furo(-30.4, -73.9, 30.4, 29.9, 7.9));
-  g.add(chapa(fundo, ZT, ZT + 0.9, alu, { chanfro: 0.3 }));
-  // A ilha das câmeras: quase a largura toda, da mesma peça de alumínio.
-  g.add(chapa(contorno(-HX, 36, HX, HY, [CANTO, CANTO, 6, 6]), TOPO_DA_ILHA, ZT + 0.2, alu, { chanfro: 0.55 }));
-  // Os anéis das três lentes e os vidros de safira.
-  const anelMat = M.anel();
-  for (const l of Object.values(LENTES)) {
-    g.add(anel(l.raioVidro, l.raioAnel, TOPO_DA_ILHA - 1.9, TOPO_DA_ILHA + 0.05, anelMat, l.x, l.y, { chanfro: 0.35 }));
-    g.add(anel(l.raioVidro - 0.9, l.raioVidro, TOPO_DA_ILHA - 1.6, TOPO_DA_ILHA - 1.0, M.plasticoPreto(), l.x, l.y));
-    // O vidro de safira na frente de cada lente: só reflexo, dá pra ver a lente por trás.
-    const safira = discoDeCostas(l.raioVidro - 0.9, TOPO_DA_ILHA - 1.5, M.reflexo(), l.x, l.y);
-    safira.renderOrder = 2;
-    g.add(safira);
-  }
-  // Janelas do flash, do LiDAR e o furo do microfone.
-  g.add(discoDeCostas(3.3, TOPO_DA_ILHA - 0.02, new THREE.MeshPhysicalMaterial({ color: 0xe8e2d0, roughness: 0.35, clearcoat: 1, transmission: 0 }), -25, 70));
-  g.add(discoDeCostas(3.3, TOPO_DA_ILHA - 0.02, M.lente(), -25, 48));
-  g.add(discoDeCostas(0.55, TOPO_DA_ILHA - 0.02, M.plasticoPreto(), -12, 59));
-  // Borda de baixo: a boca da USB-C, os furos do alto-falante e dos microfones.
-  const preto = M.plasticoPreto();
-  const boca = new THREE.Mesh(new THREE.ShapeGeometry(contorno(-4.6, -1.6, 4.6, 1.6, 1.55), 12), preto);
-  boca.rotation.x = Math.PI / 2;
-  boca.position.set(0, -HY - 0.02, 0);
-  g.add(boca);
-  for (let i = 0; i < 6; i++) {
-    for (const lado of [-1, 1]) {
-      const furinho = new THREE.Mesh(new THREE.CircleGeometry(0.55, 12), preto);
-      furinho.rotation.x = Math.PI / 2;
-      furinho.position.set(lado * (9 + i * 2.2), -HY - 0.02, 0);
-      g.add(furinho);
-    }
-  }
-  return g;
-}
-
-function vidroTraseiro() {
-  return chapa(contorno(-30.3, -73.8, 30.3, 29.8, 7.8), ZT - 0.02, ZT + 0.85, M.vidroTraseiro(), { chanfro: 0.3 });
-}
-
 function bobinaMagsafe() {
   const g = new THREE.Group();
   const cy = -12; // centro do anel (estimativa)
@@ -358,27 +310,6 @@ function bobinaMagsafe() {
   // O ímã de baixo que acerta o giro do carregador.
   g.add(caixa(10, 3.2, 0.5, ima, 0, cy - 32, -3.2, 0.2));
   g.add(caixa(4, 20, 0.15, M.flex(), 0, cy + 30, -3.1, 0.05));
-  return g;
-}
-
-function botoesDoLado(lado) {
-  const g = new THREE.Group();
-  const alu = M.aluminio();
-  const x = lado * (HX + 0.25);
-  if (lado < 0) {
-    g.add(caixa(1.3, 6.5, 3.2, alu, x, 46, 0.2, 0.55)); // Ação
-    g.add(caixa(1.3, 10, 3.2, alu, x, 33, 0.2, 0.55)); // volume +
-    g.add(caixa(1.3, 10, 3.2, alu, x, 20.5, 0.2, 0.55)); // volume −
-  } else {
-    g.add(caixa(1.3, 17, 3.2, alu, x, 33, 0.2, 0.55)); // lateral
-  }
-  return g;
-}
-
-function cameraControl() {
-  const g = new THREE.Group();
-  g.add(caixa(1.2, 19, 3.4, M.aluminio(), HX + 0.1, -24, 0.2, 0.55));
-  g.add(caixa(0.5, 17.6, 2.6, M.safira(), HX + 0.72, -24, 0.2, 0.25));
   return g;
 }
 
@@ -479,7 +410,7 @@ export function construirAparelho(texturaVisor, corDasCotas) {
     'flash-lidar': cams.flashLidar,
     'bobina-magsafe': bobinaMagsafe(),
     'vidro-traseiro': vidroTraseiro(),
-    carcaca: carcaca(),
+    carcaca: construirCarcaca(),
     'camera-control': cameraControl(),
   };
   // Os botões são dois grupos (um de cada lado) que contam como uma peça só.

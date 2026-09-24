@@ -30,8 +30,10 @@ Projeto pessoal dele, não é público nem de cliente. Estático, sem build.
 Porta **4333** (`launch.json` da raiz e `PORTAS.md`). No `localStorage` desta
 origem ficam `desmonte:fotos`, `desmonte:disparos` e `desmonte:acabamento`.
 
-Otimizar para celular não é meta (mesma decisão da `abertura`): o layout
-empilhado existe e funciona, mas o alvo é o desktop.
+**Desempenho não é limite: roda só no PC dele** (Core Ultra 9 285 + RTX 3060,
+decisão dele em 24/09/2026). Geometria densa, sombra em 4096, textura grande:
+pode. Otimizar para celular também não é meta; o layout empilhado existe e
+funciona, mas o alvo é o desktop.
 
 ## Arquivos
 
@@ -41,7 +43,8 @@ empilhado existe e funciona, mas o alvo é o desktop.
 | `css/estilo.css` | a direção visual inteira; o sistema mora no `:root` |
 | `js/optica.js` | as três câmeras (focal, sensor, f/), zoom, campo de visão, desfoque, profundidade de campo, exposição, tremor e OIS. **Sem DOM e sem three**: é o que os testes abrem |
 | `js/textos.js` | **todo** texto da tela, as fichas das 22 peças (com fonte) e as cores |
-| `js/aparelho.js` | o corpo do celular, as peças, a posição de cada uma na bancada e no explodido, as cotas e a interface do app de câmera na tela |
+| `js/aparelho.js` | as peças de dentro, a posição de cada uma na bancada e no explodido, as cotas e a interface do app de câmera na tela |
+| `js/carcaca.js` | o alumínio: contorno de canto contínuo, a carcaça varrida pelo perfil da lateral, a ilha, os anéis torneados das lentes, o vidro traseiro e os botões |
 | `js/cameras.js` | os módulos das câmeras: lâminas, sensor no carrinho do OIS, prisma da tele e os raios de luz |
 | `js/formas.js` | chapa extrudada, caixa, cilindro e anel em milímetro |
 | `js/materiais.js` | materiais e texturas desenhadas em canvas; `pintar()` troca a cor |
@@ -111,8 +114,24 @@ cores exatas (os nomes são oficiais, os tons não).
   esticavam a caixa (as câmeras caíam fora do compartimento).
 - **Na bancada, o número da peça é o impresso na manta**; a etiqueta flutuante
   só aparece na peça acesa.
-- **Alumínio com `metalness` 0,55**, não 0,9: com metal demais o prata saía
-  cinza-chumbo (só reflexo do estúdio, sem cor).
+- **A carcaça não é caixa extrudada** (`carcaca.js`, refeita em 24/09/2026
+  a pedido dele: a primeira versão era uma placa com chanfro e parecia CAD).
+  É um perfil de lateral varrido ao longo do contorno: friso que abraça a
+  tela, quina da frente de 1 mm, lateral reta, quina das costas de 1,5 mm. Tem
+  paredes e fundo por dentro, que aparecem na bancada e no explodido.
+- **Todo contorno é canto contínuo** (superelipse, expoente 4, alcance 17 mm):
+  carcaça, vidro da tela, moldura e painel saem do mesmo `contornoDoCorpo()`
+  deslocado, e por isso encaixam sem fresta. Mudou o canto, muda tudo junto.
+- **A ilha também é varrida**, 1,6 mm acima das costas, 1,6 mm pra dentro da
+  borda; os anéis das lentes são torneados (`LatheGeometry`) com a lente e os
+  anéis dos elementos por baixo da safira.
+- **Alumínio jateado:** `metalness` 0,6 com grão fino (`GRAO`, mapa de
+  aspereza e de relevo, UV em milímetro). Com metal demais o prata saía
+  cinza-chumbo; sem o grão parecia plástico.
+- **O vidro traseiro tem cor bem mais escura que o alumínio** nos
+  `ACABAMENTOS`: o vidro fosco devolve luz difusa e o alumínio devolve
+  reflexo; com a mesma cor o vidro saía um adesivo branco. Assim os dois se
+  misturam, como a Apple fez neste ano.
 - **A oficina tem a janela no eixo das lentes** e o celular aponta 0,1 rad pra
   cima: é o que dá assunto pra tele (a cidade de 280 m a 1,2 km e a torre com a
   luz vermelha a 220 m). A bandejinha alta de parafusos existe pro macro da
@@ -136,6 +155,9 @@ estão todos em `js/textos.js`.
 - O painel do navegador do Claude Code não roda `requestAnimationFrame` quando
   está escondido: as transições parecem congeladas ali. Conferir pelo MCP do
   Chrome DevTools.
+- O `python -m http.server` não manda cabeçalho de cache, e o Chrome segura os
+  módulos velhos mesmo com recarregar forçado. Pra ver uma mudança de JS,
+  abrir uma página nova com `isolatedContext` novo no MCP do DevTools.
 - Com jogo aberto (Rocket League), a GPU fica em 99% e tudo cai pra ~10 qps.
   Não é o site: medir com a placa livre antes de otimizar.
 - Telas: 1440×900, 3440×1440, 1080×1920 e 390×844.

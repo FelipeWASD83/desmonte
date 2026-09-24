@@ -47,7 +47,7 @@ export class Cena {
     this.chave = new THREE.DirectionalLight(0xfff3e8, 3.0);
     this.chave.position.set(-300, 820, 420);
     this.chave.castShadow = true;
-    this.chave.shadow.mapSize.set(2048, 2048);
+    this.chave.shadow.mapSize.set(4096, 4096); // roda só no PC: pode gastar
     Object.assign(this.chave.shadow.camera, { left: -620, right: 620, top: 620, bottom: -620, near: 50, far: 2400 });
     this.chave.shadow.bias = -0.0008;
     this.chave.shadow.normalBias = 1.6;

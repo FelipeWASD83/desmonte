@@ -123,6 +123,60 @@ const TELA_FALANTE = textura(128, 128, (ctx, w, h) => {
 });
 TELA_FALANTE.wrapS = TELA_FALANTE.wrapT = THREE.RepeatWrapping;
 
+// O grão do jateado: ruído fino que vira mapa de aspereza e de relevo. Sem
+// ele o alumínio parece plástico liso; com ele, o reflexo se quebra em
+// microbrilho, como no aparelho. Mapa em milímetro (UV das peças é em mm).
+const GRAO = textura(
+  1024,
+  1024,
+  (ctx, w, h) => {
+    const img = ctx.createImageData(w, h);
+    const r = aleatorio(71);
+    for (let i = 0; i < w * h; i++) {
+      // Duas escalas de grão: um fino por pixel e um mais largo, suave.
+      const v = 150 + (r() - 0.5) * 120;
+      img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v;
+      img.data[i * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    ctx.globalAlpha = 0.05;
+    for (let k = 0; k < 900; k++) {
+      ctx.fillStyle = r() > 0.5 ? '#ffffff' : '#000000';
+      ctx.beginPath();
+      ctx.arc(r() * w, r() * h, 2 + r() * 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  { srgb: false }
+);
+GRAO.wrapS = GRAO.wrapT = THREE.RepeatWrapping;
+GRAO.repeat.set(1 / 6, 1 / 6); // um ladrilho a cada 6 mm
+
+// Os anéis dos elementos que aparecem dentro da lente, embaixo da safira.
+const OLHO = textura(512, 512, (ctx, w, h) => {
+  const c = w / 2;
+  const fundo = ctx.createRadialGradient(c, c, 4, c, c, c);
+  fundo.addColorStop(0, '#05070a');
+  fundo.addColorStop(0.55, '#0b1016');
+  fundo.addColorStop(0.8, '#141a22');
+  fundo.addColorStop(1, '#07090c');
+  ctx.fillStyle = fundo;
+  ctx.fillRect(0, 0, w, h);
+  const aneis = [0.97, 0.9, 0.78, 0.64, 0.5, 0.36];
+  aneis.forEach((f, i) => {
+    ctx.strokeStyle = i % 2 ? 'rgba(120,150,200,0.22)' : 'rgba(200,210,230,0.16)';
+    ctx.lineWidth = i === 0 ? 10 : 3;
+    ctx.beginPath();
+    ctx.arc(c, c, f * c, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  // O diafragma lá no fundo e o elemento central.
+  ctx.fillStyle = '#020304';
+  ctx.beginPath();
+  ctx.arc(c, c, 0.28 * c, 0, Math.PI * 2);
+  ctx.fill();
+});
+
 // Todos os materiais de alumínio e de vidro traseiro, pra trocar a cor de uma vez.
 export const PINTADOS = { aluminio: [], vidro: [], anel: [] };
 
@@ -130,18 +184,41 @@ export const M = {
   aluminio: () => {
     // Anodizado: metal por baixo de uma camada tingida. Metálico de menos o
     // bastante pra cor aparecer com a luz, e não só o reflexo do estúdio.
-    const m = new THREE.MeshPhysicalMaterial({ color: 0x34353a, metalness: 0.55, roughness: 0.42, clearcoat: 0.3, clearcoatRoughness: 0.35 });
+    const m = new THREE.MeshPhysicalMaterial({
+      color: 0x34353a,
+      metalness: 0.6,
+      roughness: 0.46,
+      roughnessMap: GRAO,
+      bumpMap: GRAO,
+      bumpScale: 0.15,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.3,
+      specularIntensity: 0.9,
+    });
     PINTADOS.aluminio.push(m);
     return m;
   },
   // Os anéis das lentes são polidos, um pouco mais brilhantes que o resto.
   anel: () => {
-    const m = new THREE.MeshPhysicalMaterial({ color: 0x34353a, metalness: 0.7, roughness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.1 });
+    const m = new THREE.MeshPhysicalMaterial({ color: 0x34353a, metalness: 0.78, roughness: 0.18, clearcoat: 0.8, clearcoatRoughness: 0.06 });
     PINTADOS.anel.push(m);
     return m;
   },
   vidroTraseiro: () => {
-    const m = new THREE.MeshPhysicalMaterial({ color: 0x2c2d31, metalness: 0.1, roughness: 0.42, clearcoat: 1, clearcoatRoughness: 0.12 });
+    // Vidro jateado: fosco por fora (o grão espalha o reflexo), com uma camada
+    // lisa por cima que ainda pega a luz de raspão.
+    const m = new THREE.MeshPhysicalMaterial({
+      color: 0x2c2d31,
+      metalness: 0.05,
+      roughness: 0.62,
+      roughnessMap: GRAO,
+      clearcoat: 0.55,
+      clearcoatRoughness: 0.38,
+      sheen: 0.4,
+      sheenRoughness: 0.5,
+      sheenColor: new THREE.Color(0xffffff),
+      specularIntensity: 1,
+    });
     PINTADOS.vidro.push(m);
     return m;
   },
@@ -159,6 +236,7 @@ export const M = {
       iridescenceThicknessRange: [230, 420],
       envMapIntensity: 2.4,
     }),
+  olhoDeLente: () => new THREE.MeshPhysicalMaterial({ map: OLHO, roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02, iridescence: 0.9, iridescenceIOR: 1.4, iridescenceThicknessRange: [240, 460], envMapIntensity: 1.6 }),
   reflexo: () =>
     new THREE.MeshPhysicalMaterial({
       color: 0x000000,

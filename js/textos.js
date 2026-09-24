@@ -216,12 +216,15 @@ export const MODOS = [
   { id: 'cameras', nome: 'Câmeras' },
 ];
 
-// Cores oficiais; os tons são aproximados das fotos da Apple.
+// Cores oficiais; os tons são aproximados das fotos da Apple. O vidro vai mais
+// escuro que o alumínio de propósito: o vidro fosco devolve a luz difusa e o
+// alumínio devolve reflexo, e com esses números os dois se misturam na tela
+// (neste ano a Apple juntou as duas cores).
 export const ACABAMENTOS = [
-  { id: 'preto', nome: 'Preto', aluminio: 0x34353a, vidro: 0x2c2d31 },
-  { id: 'prata', nome: 'Prata', aluminio: 0xd8d9dc, vidro: 0xe4e5e7 },
-  { id: 'glacier', nome: 'Glacier', aluminio: 0xb9ccd9, vidro: 0xc6d6e1 },
-  { id: 'burgundy', nome: 'Burgundy', aluminio: 0x5c2230, vidro: 0x62283a },
+  { id: 'preto', nome: 'Preto', aluminio: 0x34353a, vidro: 0x232427 },
+  { id: 'prata', nome: 'Prata', aluminio: 0xd8d9dc, vidro: 0x8f9195 },
+  { id: 'glacier', nome: 'Glacier', aluminio: 0xb9ccd9, vidro: 0x7f93a2 },
+  { id: 'burgundy', nome: 'Burgundy', aluminio: 0x5c2230, vidro: 0x3e141e },
 ];
 
 const num = (v, casas = 1) => v.toFixed(casas).replace('.', ',');
