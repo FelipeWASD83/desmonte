@@ -69,3 +69,7 @@ node --test
 Na pasta `desmonte`. São 16, todos da óptica: conferem que os números da
 Apple, do iFixit e do GSMArena fecham entre si (pixel, furo, campo de visão) e
 que desfoque, exposição e estabilização se comportam como devem.
+
+## Licença
+
+Código sob a licença MIT (arquivo `LICENSE`).
